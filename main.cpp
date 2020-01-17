@@ -11,26 +11,34 @@ using namespace std;
 #define se second
 #define sz(a) (int)a.size()
 
-using pp = pair<double, double>;
+using pp = pair<int, int>;
+using LINE = pair<pp, int>;
 
-const double MAX_COORD = 10;
+const int MAX_COORD = 10;
 
 int n;
 vector<pp> points;
 vector<pp> hull;
-pair<pp, double> refLine;
+LINE refLine;
 
 void generatePoints() {
     auto seed = chrono::high_resolution_clock::now().time_since_epoch().count();
     mt19937 eng;
     eng.seed(seed);
-    uniform_real_distribution<double> range(-MAX_COORD, MAX_COORD);
-    for (double i = 0; i < n; i++) {
-        points.push_back({range(eng), range(eng)});
+    uniform_int_distribution<int> range(0, MAX_COORD);
+    map<pp, bool> vis;
+    for (int i = 0; i < n; i++) {
+        pp cur = {range(eng), range(eng)};
+        while (vis[cur]) cur = {range(eng), range(eng)};
+        vis[cur] = true;
+        points.push_back(cur);
     }
 }
 
 void inputPoints() {
+    cout << '\n' << "Masukkan " << n << " titik yang berbeda." << '\n';
+    cout << "Koordinat harus merupakan bilangan bulat (integer)" << '\n';
+
     for (int i = 0; i < n; i++) {
         pp p;
         cout << "Titik " << i + 1 << ": ";
@@ -50,44 +58,50 @@ void showHull() {
         cout << i + 1 << ". " << "(" << hull[i].fi << ", " << hull[i].se << ")" << '\n';
     }
 }
-void makerefLine(pp p1, pp p2) {
-    // refLine p1 to p2
-    double a = p2.se - p1.se;
-    double b = p1.fi - p2.fi;
-    double c = a * p1.fi + b * p1.se;
-    refLine = {{a, b}, c};
+
+LINE makeLine(pp p1, pp p2) {
+    // buat garis dari p1 ke p2
+    // bentuk ax + by = c
+    int a = p2.se - p1.se;
+    int b = p1.fi - p2.fi;
+    int c = a * p1.fi + b * p1.se;
+    int gc = __gcd(a, b);
+    gc = __gcd(gc, c);
+    if (gc != 0) {
+        a /= gc;
+        b /= gc;
+        c /= gc;
+    }
+    // agar persamaan memiliki bentuk paling sederhana
+    return {{a, b}, c};
 }
 
 int sideLine(pp p) {
-    double cc = refLine.fi.fi * p.fi + refLine.fi.se * p.se;
-    double c = refLine.se;
+    // sisi point p terhadap garis
+    int cc = refLine.fi.fi * p.fi + refLine.fi.se * p.se;
+    int c = refLine.se;
     if (cc == c) return 0;
     else if (cc > c) return 1;
     else return -1;
 }
 
-double distance(pp a, pp b) {
-    double ret = pow(a.fi - b.fi, 2) + pow(a.se - b.se, 2);
-    ret = sqrt(ret);
+int distance(pp a, pp b) {
+    int ret = pow(a.fi - b.fi, 2) + pow(a.se - b.se, 2);
     return ret;
 }
 
-void findHull() {
-    if (n <= 2) {
-        hull = points;
-        return;
-    }
-    
-    map<pair<pp, double>, pair<int, int>> lineCheck; // ensure to take two furthest points for a line equation
+void findHull(bool findMinPoints) {
+    map<LINE, pair<int, int>> lineCheck; // nyimpan dua titik terjauh untuk sebuah garis
     vector<vector<int>> adj(n);
-    for (double i = 0; i < n; i++) {
-        for (double j = i + 1; j < n; j++) {
-            makerefLine(points[i], points[j]);
+
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = i + 1; j < n; j++) {
+            refLine = makeLine(points[i], points[j]);
             bool left = false, right = false;
             bool can = true;
-            for (double k = 0; k < n && can; k++) {
+            for (int k = 0; k < n && can; k++) {
                 if (k == i || k == j) continue;
-                double side = sideLine(points[k]);
+                int side = sideLine(points[k]);
                 if (side < 0) left = true;
                 if (side > 0) right = true;
                 if (left && right) {
@@ -95,35 +109,79 @@ void findHull() {
                 }
             }
             if (can) {
+                if (!findMinPoints) {
+                    adj[i].push_back(j);
+                    adj[j].push_back(i);
+                }
+                
                 if (lineCheck.count(refLine) == 0) {
                     lineCheck[refLine] = {i, j};
                 } else {
-                    double cur = distance(points[i], points[j]);
+                    int cur = distance(points[i], points[j]);
                     pair<int, int> store = lineCheck[refLine];
-                    double tm = distance(points[store.fi], points[store.se]);
+                    int tm = distance(points[store.fi], points[store.se]);
                     if (cur > tm) {
                         lineCheck[refLine] = {i, j};
                     }
                 }
+
             }
         }
     }
 
-    // get order of the hull
-    int cur = -1;
-    for (auto it: lineCheck) {
-        if (cur == -1) cur = it.se.fi;
-        adj[it.se.fi].push_back(it.se.se);
-        adj[it.se.se].push_back(it.se.fi);
+    // buat adjacency list
+    int cur = -1; // indeks urutan pertama titik di hull, cari yang paling kiri
+    if (findMinPoints) {
+        for (auto it: lineCheck) {
+            if (cur == -1) cur = it.se.fi;
+            if (points[it.se.fi] < points[cur]) cur = it.se.fi;
+            if (points[it.se.se] < points[cur]) cur = it.se.se;
+
+            adj[it.se.fi].push_back(it.se.se);
+            adj[it.se.se].push_back(it.se.fi);
+        }
+    } else {
+        vector<vector<int>> tadj(n);
+        for (auto it: lineCheck) {
+            LINE curLine = it.fi;
+            int u = it.se.fi;
+            vector<int> tm;
+            tm.push_back(u);
+            for (auto v: adj[u]) {
+                if (makeLine(points[u], points[v]) == curLine) tm.push_back(v);
+            }
+            sort(begin(tm), end(tm), [u](int a, int b) {
+                return distance(points[u], points[a]) < distance(points[u], points[b]);
+            });
+            for (int i = 0; i < sz(tm) - 1; i++) {
+                if (cur == -1) cur = tm[i];
+                if (points[tm[i]] < points[cur]) cur = tm[i];
+                if (points[tm[i + 1]] < points[cur]) cur = tm[i + 1];
+
+                tadj[tm[i]].push_back(tm[i + 1]);
+                tadj[tm[i + 1]].push_back(tm[i]);
+            }
+        }
+        adj = tadj;
     }
 
-    vector<bool> vis(n, 0);
     bool end = false;
-    while (!end) {
+    vector<bool> vis(n, 0);
+    if (sz(adj[cur]) == 2) {
+        pp a = points[adj[cur][0]], b = points[adj[cur][1]];
+        pp ref = points[cur];
+        int dxa = ref.fi - a.fi;
+        int dya = ref.se - a.se;
+        int dxb = ref.fi - b.fi;
+        int dyb = ref.se - b.se;
+        if (dya * dxb < dyb * dxa) swap(adj[cur][0], adj[cur][1]); // proses gradien yang lebih tinggi biar urutan clockwise
+    }
+
+    while (!end) { // proses urutan
         hull.push_back(points[cur]);
         vis[cur] = true;
         end = true;
-        for (int i = 0; i < 2 && end; i++) {
+        for (int i = 0; i < sz(adj[cur]) && end; i++) {
             if (!vis[adj[cur][i]]) {
                 cur = adj[cur][i];
                 end = false;
@@ -132,9 +190,10 @@ void findHull() {
     }
 }
 
-vector<double> x, y;
 
+vector<int> x, y;
 void split(vector<pp> v) {
+    // buat matplotlib
     x.clear();
     y.clear();
     for (int i = 0; i < sz(v); i++) {
@@ -148,11 +207,12 @@ int main() {
     cout << "===== BRUTE-FORCE CONVEX HULL =====" << '\n';
     cout << "==========  Michel Fang  ==========" << '\n';
     cout << "==========    13518137   ==========" << '\n';
-    cout << "Masukkan N (banyaknya titik): ";
+
+    cout << '\n' << "Masukkan N (banyaknya titik): ";
     cin >> n;
 
     cout << "1. Bangkitkan titik secara acak" << '\n';
-    cout << "2. Masukkan titik sendiri" << '\n';
+    cout << "2. Masukkan titik sendiri" << '\n'; // buat debug/hardcode
     int opt;
     cout << "Masukkan pilihan: ";
     cin >> opt;
@@ -165,36 +225,50 @@ int main() {
     cout << '\n' << "TITIK-TITIK YANG DIGUNAKAN:" << '\n';
     showPoints();
 
+    bool findMinPoints = false;
+    cout << '\n' << "Cari Convex Hull dengan titik minimal?" << '\n';
+    cout << " (Y) : Jika ada 3 titik (atau lebih) dalam satu garis, maka titik yang diambil sebagai himpunan convex hull adalah 2 titik terjauh" << '\n';
+    cout << " (N) : Jika ada 3 titik (atau lebih) dalam satu garis di convex hull, ambil semuanya" << '\n';
+    cout << "Masukkan Pilihan (Y/N): ";
+    char c;
+    cin >> c;
+    findMinPoints = (c == 'Y');
+
     // time start
     clock_t start = clock();
-    findHull();
+    findHull(findMinPoints);
     double timeTaken = (clock()-start)*1./CLOCKS_PER_SEC;
     // time end
 
     cout << '\n' << "HULL:" << '\n';
     showHull();
 
+    // biar lucu
+    // plt::xkcd();
+
+    // grid
+    plt::grid(true);
+
     // [color][marker][line]
     split(points);
-    plt::named_plot("Points", x, y, "bo");
+    plt::named_plot("Points", x, y, "ko");
 
-    split(hull);
-    plt::named_plot("Hull", x, y, "gD");
-
+    // plot garis
     hull.push_back(hull[0]);
     for (int i = 0; i < sz(hull) - 1; i++) {
-        // cout << i + 1 << " " << grad(hull[0], hull[i]) << '\n';
-        vector<double> tx = {hull[i].fi, hull[i + 1].fi}, ty = {hull[i].se, hull[i + 1].se};
-        plt::plot(tx, ty, "g.--");
+        vector<int> tx = {hull[i].fi, hull[i + 1].fi}, ty = {hull[i].se, hull[i + 1].se};
+        plt::plot(tx, ty, "b,:");
         string s = "P";
         s += to_string(i + 1);
         plt::text(hull[i].fi, hull[i].se, s);
     }
 
-    string graphTitle = "N = " + to_string(n) + ", " + "Time taken = " + to_string(timeTaken) + " s";
+    split(hull);
+    plt::named_plot("Hull", x, y, "bD");
+
+    string graphTitle = "N = " + to_string(n) + ", " + "Waktu = " + to_string(timeTaken) + " s";
     plt::title(graphTitle);
     plt::legend();
-
     plt::show();
     return 0;
 }
