@@ -17,7 +17,7 @@ using LINE = pair<pp, int>;
 const int MAX_COORD = 10;
 
 int n;
-vector<pp> points;
+vector<pp> pts;
 vector<pp> hull;
 LINE refLine;
 
@@ -31,7 +31,7 @@ void generatePoints() {
         pp cur = {range(eng), range(eng)};
         while (vis[cur]) cur = {range(eng), range(eng)};
         vis[cur] = true;
-        points.push_back(cur);
+        pts.push_back(cur);
     }
 }
 
@@ -43,13 +43,13 @@ void inputPoints() {
         pp p;
         cout << "Titik " << i + 1 << ": ";
         cin >> p.fi >> p.se;
-        points.push_back(p);
+        pts.push_back(p);
     }
 }
 
 void showPoints() {
     for (int i = 0; i < n; i++) {
-        cout << i + 1 << ". " << "(" << points[i].fi << ", " << points[i].se << ")" << '\n';
+        cout << i + 1 << ". " << "(" << pts[i].fi << ", " << pts[i].se << ")" << '\n';
     }
 }
 
@@ -92,16 +92,16 @@ int distance(pp a, pp b) {
 
 void findHull(bool findMinPoints) {
     map<LINE, pair<int, int>> lineCheck; // nyimpan dua titik terjauh untuk sebuah garis
-    vector<vector<int>> adj(n);
+    vector<bool> vis(n, 0);
 
     for (int i = 0; i < n - 1; i++) {
         for (int j = i + 1; j < n; j++) {
-            refLine = makeLine(points[i], points[j]);
+            refLine = makeLine(pts[i], pts[j]);
             bool left = false, right = false;
             bool can = true;
             for (int k = 0; k < n && can; k++) {
                 if (k == i || k == j) continue;
-                int side = sideLine(points[k]);
+                int side = sideLine(pts[k]);
                 if (side < 0) left = true;
                 if (side > 0) right = true;
                 if (left && right) {
@@ -110,16 +110,15 @@ void findHull(bool findMinPoints) {
             }
             if (can) {
                 if (!findMinPoints) {
-                    adj[i].push_back(j);
-                    adj[j].push_back(i);
+                    vis[i] = vis[j] = true;
                 }
                 
                 if (lineCheck.count(refLine) == 0) {
                     lineCheck[refLine] = {i, j};
                 } else {
-                    int cur = distance(points[i], points[j]);
+                    int cur = distance(pts[i], pts[j]);
                     pair<int, int> store = lineCheck[refLine];
-                    int tm = distance(points[store.fi], points[store.se]);
+                    int tm = distance(pts[store.fi], pts[store.se]);
                     if (cur > tm) {
                         lineCheck[refLine] = {i, j};
                     }
@@ -129,64 +128,64 @@ void findHull(bool findMinPoints) {
         }
     }
 
-    // buat adjacency list
-    int cur = -1; // indeks urutan pertama titik di hull, cari yang paling kiri
-    if (findMinPoints) {
-        for (auto it: lineCheck) {
-            if (cur == -1) cur = it.se.fi;
-            if (points[it.se.fi] < points[cur]) cur = it.se.fi;
-            if (points[it.se.se] < points[cur]) cur = it.se.se;
+   if (findMinPoints) {
+       for (auto it: lineCheck) {
+           vis[it.se.fi] = vis[it.se.se] = true;
+       }
+   }
 
-            adj[it.se.fi].push_back(it.se.se);
-            adj[it.se.se].push_back(it.se.fi);
-        }
-    } else {
-        vector<vector<int>> tadj(n);
-        for (auto it: lineCheck) {
-            LINE curLine = it.fi;
-            int u = it.se.fi;
-            vector<int> tm;
-            tm.push_back(u);
-            for (auto v: adj[u]) {
-                if (makeLine(points[u], points[v]) == curLine) tm.push_back(v);
-            }
-            sort(begin(tm), end(tm), [u](int a, int b) {
-                return distance(points[u], points[a]) < distance(points[u], points[b]);
-            });
-            for (int i = 0; i < sz(tm) - 1; i++) {
-                if (cur == -1) cur = tm[i];
-                if (points[tm[i]] < points[cur]) cur = tm[i];
-                if (points[tm[i + 1]] < points[cur]) cur = tm[i + 1];
 
-                tadj[tm[i]].push_back(tm[i + 1]);
-                tadj[tm[i + 1]].push_back(tm[i]);
-            }
+    pp pvt = {MAX_COORD + 1, MAX_COORD + 1};
+    for (int i = 0; i < n; i++) {
+        if (vis[i]) {
+            hull.push_back(pts[i]);
+            pvt = min(pvt, pts[i]);
         }
-        adj = tadj;
     }
 
-    bool end = false;
-    vector<bool> vis(n, 0);
-    if (sz(adj[cur]) == 2) {
-        pp a = points[adj[cur][0]], b = points[adj[cur][1]];
-        pp ref = points[cur];
-        int dxa = ref.fi - a.fi;
-        int dya = ref.se - a.se;
-        int dxb = ref.fi - b.fi;
-        int dyb = ref.se - b.se;
-        if (dya * dxb < dyb * dxa) swap(adj[cur][0], adj[cur][1]); // proses gradien yang lebih tinggi biar urutan clockwise
+    vector<pp> abv, blw, on;
+    for (int i = 0; i < sz(hull); i++) {
+        if (hull[i] == pvt) continue;
+        if (hull[i].se > pvt.se) abv.push_back(hull[i]);
+        else {
+            blw.push_back(hull[i]);
+        }
     }
 
-    while (!end) { // proses urutan
-        hull.push_back(points[cur]);
-        vis[cur] = true;
-        end = true;
-        for (int i = 0; i < sz(adj[cur]) && end; i++) {
-            if (!vis[adj[cur][i]]) {
-                cur = adj[cur][i];
-                end = false;
-            }
+    sort(begin(abv), end(abv), [pvt](pp a, pp b) {
+        int dya = a.se - pvt.se;
+        int dxa = a.fi - pvt.fi;
+        int dyb = b.se - pvt.se;
+        int dxb = b.fi - pvt.fi;
+        int cross = (dya * dxb) - (dyb * dxa);
+        if (cross == 0) { // titik a dan b segaris sama pvt
+            int da = distance(pvt, a);
+            int db = distance(pvt, b);
+            return da < db;
         }
+        return cross > 0;
+    });
+    sort(begin(blw), end(blw), [pvt](pp a, pp b) {
+        int dya = a.se - pvt.se;
+        int dxa = a.fi - pvt.fi;
+        int dyb = b.se - pvt.se;
+        int dxb = b.fi - pvt.fi;
+        int cross = (dya * dxb) - (dyb * dxa);
+        if (cross == 0) { // titik a dan b segaris sama pvt
+            int da = distance(pvt, a);
+            int db = distance(pvt, b);
+            return da > db;
+        }
+        return cross > 0;
+    });
+
+    hull.clear();
+    hull.push_back(pvt);
+    for (auto it: abv) {
+        hull.push_back(it);
+    }
+    for (auto it: blw) {
+        hull.push_back(it);
     }
 }
 
@@ -250,8 +249,8 @@ int main() {
     plt::grid(true);
 
     // [color][marker][line]
-    split(points);
-    plt::named_plot("Points", x, y, "ko");
+    split(pts);
+    plt::named_plot("pts", x, y, "ko");
 
     // plot garis
     hull.push_back(hull[0]);
