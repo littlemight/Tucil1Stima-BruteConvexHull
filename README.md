@@ -8,13 +8,18 @@ Michel Fang / 13518137 / K2
 
 ## Compile dan Run
 ```
-./run
+./compile <nama file tanpa .cpp>
+```
+
+Untuk menjalankan
+```
+./a.out
 ```
 
 Jika ingin menggunakan sebuah kasus uji dari sebuah file
 ```
-./run < FILENAME 
+./a.out <nama file input> 
 ```
 
-## Kudos
+## Credits
 matplotlib-cpp : https://github.com/lava/matplotlib-cpp
