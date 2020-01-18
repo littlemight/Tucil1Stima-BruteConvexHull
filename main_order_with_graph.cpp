@@ -168,13 +168,7 @@ void findHull(bool findMinPoints) {
     bool end = false;
     vector<bool> vis(n, 0);
     if (sz(adj[cur]) == 2) {
-        pp a = pts[adj[cur][0]], b = pts[adj[cur][1]];
-        pp ref = pts[cur];
-        int dxa = ref.fi - a.fi;
-        int dya = ref.se - a.se;
-        int dxb = ref.fi - b.fi;
-        int dyb = ref.se - b.se;
-        if (dya * dxb < dyb * dxa) swap(adj[cur][0], adj[cur][1]); // proses gradien yang lebih tinggi biar urutan clockwise
+        if (pts[adj[cur][0]].se < pts[adj[cur][1]].se) swap(adj[cur][0], adj[cur][1]); // proses clockwise order
     }
 
     while (!end) { // proses urutan

@@ -111,19 +111,18 @@ void findHull(bool findMinPoints) {
             if (can) {
                 if (!findMinPoints) {
                     vis[i] = vis[j] = true;
-                }
-                
-                if (lineCheck.count(refLine) == 0) {
-                    lineCheck[refLine] = {i, j};
                 } else {
-                    int cur = distance(pts[i], pts[j]);
-                    pair<int, int> store = lineCheck[refLine];
-                    int tm = distance(pts[store.fi], pts[store.se]);
-                    if (cur > tm) {
+                    if (lineCheck.count(refLine) == 0) {
                         lineCheck[refLine] = {i, j};
+                    } else {
+                        int cur = distance(pts[i], pts[j]);
+                        pair<int, int> store = lineCheck[refLine];
+                        int tm = distance(pts[store.fi], pts[store.se]);
+                        if (cur > tm) {
+                            lineCheck[refLine] = {i, j};
+                        }
                     }
                 }
-
             }
         }
     }
@@ -147,8 +146,15 @@ void findHull(bool findMinPoints) {
     for (int i = 0; i < sz(hull); i++) {
         if (hull[i] == pvt) continue;
         if (hull[i].se > pvt.se) abv.push_back(hull[i]);
-        else {
-            blw.push_back(hull[i]);
+        else if (hull[i].se < pvt.se) blw.push_back(hull[i]);
+        else on.push_back(hull[i]);
+    }
+    if (!sz(abv)) {
+        abv = on;
+    } else {
+        for (auto it: on) {
+            blw.push_back(it);
+            on.clear();
         }
     }
 
@@ -250,7 +256,7 @@ int main() {
 
     // [color][marker][line]
     split(pts);
-    plt::named_plot("pts", x, y, "ko");
+    plt::named_plot("Points", x, y, "ko");
 
     // plot garis
     hull.push_back(hull[0]);
