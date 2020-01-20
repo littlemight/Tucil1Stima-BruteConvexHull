@@ -2,6 +2,7 @@
 #include <random>
 #include <chrono>
 #include <functional>
+#include <map>
 #include "dependencies/matplotlibcpp.h"
 
 namespace plt = matplotlibcpp;
@@ -65,6 +66,14 @@ LINE makeLine(pp p1, pp p2) {
     int a = p2.se - p1.se;
     int b = p1.fi - p2.fi;
     int c = a * p1.fi + b * p1.se;
+
+    // agar untuk setiap garis yang mendeskripsikan garis yang sama, persamaannya sama
+    // Contoh:
+    // -2x + 4y = 8
+    // disederhanakan menjadi
+    // x - 2y = -4
+    // koefisien a, b, c saling koprima.
+    // a > 0, jika a == 0, maka b > 0
     int gc = __gcd(a, b);
     gc = __gcd(gc, c);
     if (gc != 0) {
@@ -72,7 +81,16 @@ LINE makeLine(pp p1, pp p2) {
         b /= gc;
         c /= gc;
     }
-    // agar persamaan memiliki bentuk paling sederhana
+    if (a < 0) {
+        a *= -1;
+        b *= -1;
+        c *= -1;
+    } else if (a == 0) {
+        if (b < 0) {
+            b *= -1;
+            c *= -1;
+        }
+    }
     return {{a, b}, c};
 }
 
@@ -87,11 +105,12 @@ int sideLine(pp p) {
 
 int distance(pp a, pp b) {
     int ret = pow(a.fi - b.fi, 2) + pow(a.se - b.se, 2);
+    // untuk membandingkan jarak, tidak perlu diakarkan karena distance sebanding dengan distance^2
     return ret;
 }
 
 void findHull(bool findMinPoints) {
-    map<LINE, pair<int, int>> lineCheck; // nyimpan dua titik terjauh untuk sebuah garis
+    map<LINE, pair<int, int>> lineCheck; // menyimpan dua titik terjauh untuk sebuah garis
     vector<bool> vis(n, 0);
 
     for (int i = 0; i < n - 1; i++) {
@@ -231,9 +250,9 @@ int main() {
     showPoints();
 
     bool findMinPoints = false;
-    cout << '\n' << "Cari Convex Hull dengan titik minimal?" << '\n';
-    cout << " (Y) : Jika ada 3 titik (atau lebih) dalam satu garis, maka titik yang diambil sebagai himpunan convex hull adalah 2 titik terjauh" << '\n';
-    cout << " (N) : Jika ada 3 titik (atau lebih) dalam satu garis di convex hull, ambil semuanya" << '\n';
+    cout << '\n' << "Cari Convex Hull dengan titik minimal? (Y/N)" << '\n';
+    // cout << " (Y) : Jika ada 3 titik (atau lebih) dalam satu garis, maka titik yang diambil sebagai himpunan convex hull adalah 2 titik terjauh" << '\n';
+    // cout << " (N) : Jika ada 3 titik (atau lebih) dalam satu garis di convex hull, ambil semuanya" << '\n';
     cout << "Masukkan Pilihan (Y/N): ";
     char c;
     cin >> c;
@@ -247,9 +266,6 @@ int main() {
 
     cout << '\n' << "HULL:" << '\n';
     showHull();
-
-    // biar lucu
-    // plt::xkcd();
 
     // grid
     plt::grid(true);
