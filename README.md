@@ -6,19 +6,43 @@ Michel Fang / 13518137 / K2
 2. Python 2.7 dan matplotlib
 3. Linux (wrapper matplotlib untuk C++ hanya bekerja di linux)
 
+## Struktur Folder
+```
+├── compile.sh
+├── run.sh
+├── run_input.sh
+├── README.md
+├── bin
+│   ├── a.out
+├── src
+│   ├── dependencies
+│   └── main.cpp
+└── test_data
+    ├── IN
+    ├── IN2
+    ├── TC_N10
+    ├── TC_N20
+    ├── TC_N20_Manual
+    ├── TC_N5
+    └── TC_N5_Manual
+```
+1. bin berisi executable dari program
+2. src berisi kode program dan dependencies (matplotlib-cpp)
+3. test_data berisi beberapa file input untuk program
+
 ## Compile dan Run
 ```
-./compile <nama file tanpa .cpp>
+./compile.sh
 ```
 
 Untuk menjalankan
 ```
-./a.out
+./run.sh
 ```
 
 Jika ingin menggunakan sebuah kasus uji dari sebuah file
 ```
-./a.out <nama file input> 
+./run_input.sh <nama file input>
 ```
 
 ## Credits

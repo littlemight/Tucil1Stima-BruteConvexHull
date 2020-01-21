@@ -1,0 +1,1 @@
+bin/a.out < test_data/$1

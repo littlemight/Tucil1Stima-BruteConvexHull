@@ -251,8 +251,6 @@ int main() {
 
     bool findMinPoints = false;
     cout << '\n' << "Cari Convex Hull dengan titik minimal? (Y/N)" << '\n';
-    // cout << " (Y) : Jika ada 3 titik (atau lebih) dalam satu garis, maka titik yang diambil sebagai himpunan convex hull adalah 2 titik terjauh" << '\n';
-    // cout << " (N) : Jika ada 3 titik (atau lebih) dalam satu garis di convex hull, ambil semuanya" << '\n';
     cout << "Masukkan Pilihan (Y/N): ";
     char c;
     cin >> c;
